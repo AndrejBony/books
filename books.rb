@@ -8,15 +8,14 @@ authors = []
 books_authors = []
 languages = []
 publishers = []
-keywords = ["====== books ======", "====== authors ======", "====== books_authors ======", "====== languages ======", "====== publishers ======"]
 # f = CSV.read(BOOKS_FILE, encoding: "UTF-8")
 
-def parse_csv(csv_file, k, b, a, b_a, l, p)
+def parse_csv(b, a, b_a, l, p)
+  keys = ["books", "authors", "books_authors", "languages", "publishers"]
   x = 0
-  CSV.foreach(csv_file, encoding: "UTF-8") do |col|
-    if k.include?(col[0])
+  CSV.foreach(BOOKS_FILE, encoding: "UTF-8") do |col|
+    if "====== " + keys[x].to_s + " ======" == col[0]
       x += 1
-      next
     end
 
     case x
@@ -63,7 +62,12 @@ def add_arguments(array, var, opt)
   return var
 end
 
-parse_csv(BOOKS_FILE, keywords, books, authors, books_authors, languages, publishers)
+def specify_array(arr, var, num)
+  arr.delete_if { |row| row[num] != var.keys.first }
+  return arr
+end
+
+parse_csv(books, authors, books_authors, languages, publishers)
 options = {}
 arguments(options)
 
@@ -84,16 +88,27 @@ end
 
 ids_of_books = Hash.new { |hsh, key| hsh[key] = [] }
 books_authors.each do |row|
-  if author.keys.first.to_s == row[1]
+  if author.keys.first == row[1]
     ids_of_books[row[2]]
   end
 end
 
 found_books = []
 books.each do |row|
-  if ids_of_books.include?(row[0])
-    found_books.push(row)
+  ids_of_books.each do |key, _value|
+    if key == row[0]
+      found_books.push(row)
+    end
   end
+end
+found_books.sort!
+
+if !language.nil? || !language.to_s.empty?
+  specify_array(found_books, language, 2)
+end
+
+if !publisher.nil? || !publisher.to_s.empty?
+  specify_array(found_books, publisher, 3)
 end
 
 books_authors.each do |row|
@@ -104,6 +119,29 @@ books_authors.each do |row|
   end
 end
 
-puts "Author = #{author}"
-puts "Language = #{language}"
-puts "Publisher = #{publisher}"
+found_authors = Hash.new { |hsh, key| hsh[key] = [] }
+ids_of_books.each do |key, value|
+  value.each do |v|
+    authors.each do |row|
+      if v == row[0]
+        found_authors[key] << row[1]
+      end
+    end
+  end
+end
+
+output = ""
+found_books.each do |row|
+  found_authors.each do |key, value|
+    if key == row[0]
+      value.each do |v|
+        output << v + ", "
+      end
+      output = output[0...-2]
+      output << " (" + row[4].to_s + "): "
+      output << row[1].to_s + "\n"
+    end
+  end
+end
+
+puts output
